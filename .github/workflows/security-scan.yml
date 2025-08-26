@@ -1,5 +1,5 @@
 # Security scanning workflow for the security-sandbox project
-# This workflow focuses on security-related checks and dependency scanning
+# This workflow focuses on CodeQL security analysis
 
 name: Security Scan
 
@@ -15,6 +15,7 @@ on:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - name: Checkout code
@@ -26,23 +27,6 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-
-    # OWASP Dependency Check for vulnerability scanning
-    - name: OWASP Dependency Check
-      uses: dependency-check/Dependency-Check_Action@main
-      with:
-        project: 'Security Sandbox'
-        path: '.'
-        format: 'HTML'
-        out: 'reports'
-
-    # Upload security scan results
-    - name: Upload OWASP Dependency Check results
-      uses: actions/upload-artifact@v4
-      with:
-        name: dependency-check-report
-        path: reports/
-        retention-days: 30
 
     # CodeQL Analysis for security vulnerabilities
     - name: Initialize CodeQL
@@ -56,10 +40,7 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-    # Snyk security scanning
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/maven@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high
+    # Note: OWASP Dependency Check and Snyk require additional setup
+    # OWASP Dependency Check: Requires Docker and Java configuration
+    # Snyk: Requires SNYK_TOKEN secret and account setup
+    # These can be added later if needed for comprehensive security scanning

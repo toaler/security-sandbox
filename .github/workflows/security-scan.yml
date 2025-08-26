@@ -30,7 +30,7 @@ jobs:
 
     # CodeQL Analysis for security vulnerabilities
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: java
 
@@ -38,7 +38,7 @@ jobs:
       run: mvn -B clean compile
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
 
     # Note: OWASP Dependency Check and Snyk require additional setup
     # OWASP Dependency Check: Requires Docker and Java configuration

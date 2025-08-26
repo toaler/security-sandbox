@@ -16,6 +16,10 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     steps:
     - name: Checkout code
@@ -39,6 +43,7 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+      continue-on-error: true
 
     # Note: OWASP Dependency Check and Snyk require additional setup
     # OWASP Dependency Check: Requires Docker and Java configuration

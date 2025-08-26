@@ -1,24 +1,35 @@
 package com.example.integrity;
 
-import com.example.utils.CryptoUtils;
+import com.google.crypto.tink.KeysetHandle;
+import com.google.crypto.tink.Mac;
+import com.google.crypto.tink.mac.MacConfig;
+import com.google.crypto.tink.mac.HmacKeyManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import static org.assertj.core.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Test class for data integrity verification using cryptographic hashes.
  */
-@DisplayName("Data Integrity Tests")
-class IntegrityTest {
+@DisplayName("Message Digest Tests")
+class MessageDigestTest {
 
     private String warehouseRefundsJson;
     private String expectedHash;
+
+    @BeforeAll
+    static void setUpTink() throws Exception {
+        MacConfig.register();
+    }
 
     @BeforeEach
     void setUp() throws IOException {
@@ -31,6 +42,44 @@ class IntegrityTest {
         expectedHash = "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678";
     }
 
+    /**
+     * Generates SHA-256 hash using standard Java crypto for deterministic hashing.
+     */
+    private String sha256(byte[] content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(content);
+            return bytesToHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
+
+    /**
+     * Generates HMAC-SHA256 using Google Tink.
+     */
+    private String hmacSha256(byte[] content) {
+        try {
+            KeysetHandle keysetHandle = KeysetHandle.generateNew(HmacKeyManager.hmacSha256Template());
+            Mac mac = keysetHandle.getPrimitive(Mac.class);
+            byte[] macBytes = mac.computeMac(content);
+            return bytesToHex(macBytes);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to compute HMAC-SHA256 with Tink", e);
+        }
+    }
+
+    /**
+     * Converts a byte array to a hexadecimal string.
+     */
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
+
     @Test
     @DisplayName("Should generate consistent SHA-256 hash for JSON data")
     void shouldGenerateConsistentSha256Hash() {
@@ -38,7 +87,7 @@ class IntegrityTest {
         byte[] jsonBytes = warehouseRefundsJson.getBytes();
         
         // When
-        String actualHash = CryptoUtils.sha256(jsonBytes);
+        String actualHash = sha256(jsonBytes);
         
         // Then
         assertThat(actualHash)
@@ -60,8 +109,8 @@ class IntegrityTest {
         byte[] tamperedBytes = tamperedJson.getBytes();
         
         // When
-        String originalHash = CryptoUtils.sha256(originalBytes);
-        String tamperedHash = CryptoUtils.sha256(tamperedBytes);
+        String originalHash = sha256(originalBytes);
+        String tamperedHash = sha256(tamperedBytes);
         
         // Then
         assertThat(originalHash).isNotEqualTo(tamperedHash);
@@ -80,8 +129,8 @@ class IntegrityTest {
         byte[] content2 = warehouseRefundsJson.getBytes(); // Same content
         
         // When
-        String hash1 = CryptoUtils.sha256(content1);
-        String hash2 = CryptoUtils.sha256(content2);
+        String hash1 = sha256(content1);
+        String hash2 = sha256(content2);
         
         // Then
         assertThat(hash1).isEqualTo(hash2);
@@ -95,7 +144,7 @@ class IntegrityTest {
         byte[] emptyContent = new byte[0];
         
         // When
-        String hash = CryptoUtils.sha256(emptyContent);
+        String hash = sha256(emptyContent);
         
         // Then
         assertThat(hash).isNotNull();
@@ -113,7 +162,7 @@ class IntegrityTest {
         byte[] jsonBytes = warehouseRefundsJson.getBytes();
         
         // When
-        String actualHash = CryptoUtils.sha256(jsonBytes);
+        String actualHash = sha256(jsonBytes);
         
         // Then
         // In a real scenario, you would compare against a stored hash
@@ -136,10 +185,10 @@ class IntegrityTest {
         String dataAtVerification = warehouseRefundsJson; // Should be identical
         
         // When - Calculate hash at creation time
-        String creationHash = CryptoUtils.sha256(dataAtCreation.getBytes());
+        String creationHash = sha256(dataAtCreation.getBytes());
         
         // And - Calculate hash at verification time
-        String verificationHash = CryptoUtils.sha256(dataAtVerification.getBytes());
+        String verificationHash = sha256(dataAtVerification.getBytes());
         
         // Then - Verify integrity
         boolean isIntegrityMaintained = creationHash.equals(verificationHash);

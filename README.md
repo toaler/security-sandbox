@@ -124,6 +124,83 @@ The test suite demonstrates:
 - Collection and string assertions
 - Comprehensive cryptographic concept comparisons
 
+## Security Properties and Technologies
+
+This project demonstrates technologies that address the four fundamental security properties:
+
+### Security Properties Overview
+
+| Security Property | Definition | Technologies Used | Implementation |
+|-------------------|------------|-------------------|----------------|
+| **Integrity** | Ensures data has not been altered or corrupted during transmission or storage | • SHA-256 Message Digest<br>• MAC (Message Authentication Code)<br>• HMAC-SHA256<br>• AES-GCM (AEAD) | • `MessageDigest.SHA-256`<br>• Custom hash(key \|\| data)<br>• Google Tink HMAC<br>• Google Tink AES-GCM |
+| **Authentication** | Verifies the identity of the sender or origin of data | • MAC<br>• HMAC-SHA256<br>• JWT with HMAC signing<br>• AES-GCM (AEAD) | • Custom keyed hash<br>• Google Tink HMAC<br>• Nimbus JOSE+JWT<br>• Google Tink AES-GCM |
+| **Confidentiality** | Ensures data is accessible only to authorized parties | • AES-256-GCM encryption<br>• Associated Authenticated Encryption (AEAD) | • Google Tink AES-GCM<br>• Automatic key generation<br>• Secure ciphertext generation |
+| **Non-repudiation** | Prevents the sender from denying they sent a message | • JWT with digital signatures<br>• HMAC-SHA256 for JWT signing<br>• Timestamped claims | • Nimbus JOSE+JWT<br>• HMAC-SHA256 signing<br>• JWT expiration claims |
+
+### Detailed Technology Mapping
+
+#### Integrity Technologies
+- **SHA-256 Message Digest**: Provides data integrity verification without authentication
+- **MAC**: Provides both integrity and authentication using a shared secret key
+- **HMAC-SHA256**: Standardized MAC algorithm providing integrity and authentication
+- **AES-GCM**: Provides integrity through authenticated encryption
+
+#### Authentication Technologies
+- **MAC/HMAC**: Verifies data origin using shared secret keys
+- **JWT with HMAC**: Provides authentication through signed tokens
+- **AES-GCM**: Provides authentication through associated data verification
+
+#### Confidentiality Technologies
+- **AES-256-GCM**: Symmetric encryption providing data confidentiality
+- **Google Tink**: Provides secure key management and encryption primitives
+- **AEAD**: Ensures both confidentiality and integrity in one operation
+
+#### Non-repudiation Technologies
+- **JWT with HMAC-SHA256**: Provides proof of message origin and integrity
+- **Timestamped Claims**: JWT expiration and issued-at timestamps
+- **Digital Signatures**: HMAC-based signatures for JWT tokens
+
+### Security Property Coverage
+
+| Technology | Integrity | Authentication | Confidentiality | Non-repudiation |
+|------------|-----------|----------------|-----------------|-----------------|
+| **SHA-256** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **MAC** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
+| **HMAC-SHA256** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
+| **AES-GCM** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| **JWT + HMAC** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
+
+### Use Case Examples
+
+#### File Integrity Verification
+```java
+// Integrity only - SHA-256
+String fileHash = sha256(fileContent);
+// Use case: File checksums, blockchain hashes
+```
+
+#### API Authentication
+```java
+// Integrity + Authentication - HMAC
+String signature = hmacSha256(requestBody, secretKey);
+// Use case: API request signing, secure communication
+```
+
+#### Data Encryption
+```java
+// Integrity + Authentication + Confidentiality - AES-GCM
+byte[] ciphertext = aesGcm.encrypt(plaintext, associatedData);
+// Use case: Secure data storage, encrypted communication
+```
+
+#### Token-based Authentication
+```java
+// Integrity + Authentication + Non-repudiation - JWT + HMAC
+SignedJWT jwt = new SignedJWT(header, claims);
+jwt.sign(hmacSigner);
+// Use case: User sessions, API authentication, SSO
+```
+
 ## Cryptographic Concepts Comparison
 
 ### Security Hierarchy

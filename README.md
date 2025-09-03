@@ -9,9 +9,10 @@ This project serves as a sandbox environment for exploring and testing various s
 - **Google Tink**: Cryptographic library for encryption/decryption and HMAC
 - **Nimbus JOSE+JWT**: JWT (JSON Web Token) creation and verification
 - **JOSE Standards**: JSON Web Structure (JWS) for digital signatures and authentication
+- **JOSE Standards**: JSON Web Encryption (JWE) for encrypted content and confidentiality
 - **JUnit 5**: Latest version for unit testing
 - **AssertJ**: Fluent assertion library for readable tests
-- **Cryptographic Concepts**: Message Digest, MAC, HMAC, and JWS comparison
+- **Cryptographic Concepts**: Message Digest, MAC, HMAC, JWS, and JWE comparison
 
 ## Prerequisites
 
@@ -38,7 +39,8 @@ security-sandbox/
 │       │           ├── IntegrityTest.java           # Data integrity verification
 │       │           ├── TinkHmacTest.java            # Tink HMAC demonstrations
 │       │           ├── CryptographicComparisonTest.java # MD, MAC, HMAC comparison
-│       │           └── JwsTest.java                 # JWS functionality tests
+│       │           ├── JwsTest.java                 # JWS functionality tests
+│       │           └── JweTest.java                 # JWE functionality tests
 │       └── resources/
 │           └── com/example/integrity/
 │               └── warehouse-refunds.json           # Sample data for testing
@@ -214,6 +216,219 @@ Run JWS tests with:
 mvn test -Dtest=JwsTest
 ```
 
+### JSON Web Encryption (JWE)
+
+JSON Web Encryption (JWE) provides a means of representing encrypted content using JSON-based data structures. JWE in direct encryption mode provides three of the four fundamental cryptographic goals: integrity, authentication, and confidentiality.
+
+#### JWE Implementation Features
+
+- **AES-GCM Algorithm**: Uses AES-256-GCM for authenticated encryption
+- **RFC 7516 Compliance**: Follows JSON Web Encryption standard
+- **Five-Part Structure**: Implements header.encrypted_key.iv.ciphertext.tag format
+- **Content Encryption**: Payload is completely encrypted and unreadable
+- **Authentication Tag**: Ensures data integrity and authenticity
+
+#### JWE Use Cases Demonstrated
+
+1. **Encrypted Order Data Storage**
+   - Encrypts sensitive order information
+   - Provides complete confidentiality for stored data
+   - Ensures data integrity through authentication tags
+
+2. **Secure API Communication**
+   - Encrypts complete API payloads
+   - Hides sensitive data in transit
+   - Prevents data interception and tampering
+
+3. **Encrypted Configuration Files**
+   - Secures configuration information
+   - Protects database credentials and API keys
+   - Ensures configuration integrity
+
+4. **Secure Message Exchange**
+   - Encrypts private communications
+   - Provides end-to-end encryption
+   - Ensures message authenticity and integrity
+
+#### JWE Security Properties
+
+| Security Property | Description | Implementation |
+|-------------------|-------------|----------------|
+| **Confidentiality** | Content is encrypted and unreadable without the key | AES-256-GCM encryption |
+| **Integrity** | Any modification breaks decryption | Authentication tag verification |
+| **Authentication** | Only holders of the correct key can decrypt | Key-based encryption/decryption |
+| **Non-repudiation** | Not provided in direct mode | Cannot prove who encrypted content |
+
+#### JWE Token Structure
+
+```
+eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiZGlyIn0.encrypted_key.iv.ciphertext.tag
+```
+
+**Components:**
+- **Header**: Algorithm and encryption method specification (`A256GCM`, `dir`)
+- **Encrypted Key**: Content encryption key (empty in direct mode)
+- **IV**: Initialization vector for AES-GCM
+- **Ciphertext**: Encrypted payload content
+- **Tag**: Authentication tag for integrity verification
+
+#### JWE Implementation Example
+
+```java
+// Encrypt sensitive order data
+String orderData = "{\"orders\":[{\"orderId\":\"12345\",\"amount\":500}]}";
+String jweToken = CryptoUtils.encryptAsJwe(orderData, aesKey);
+
+// Decrypt the content
+String decryptedData = CryptoUtils.decryptJwe(jweToken, aesKey);
+if (decryptedData.equals(orderData)) {
+    // Data is confidential, authentic, and unmodified
+    System.out.println("Order data decrypted successfully");
+}
+```
+
+#### JWE Testing
+
+The project includes comprehensive JWE testing with:
+- **Encryption Tests**: Verify JWE token creation
+- **Decryption Tests**: Ensure payload integrity and confidentiality
+- **Security Tests**: Demonstrate tamper detection and wrong key failures
+- **Use Case Tests**: Real-world scenario validation
+- **Cryptographic Goals Tests**: Verify integrity, authentication, and confidentiality
+
+Run JWE tests with:
+```bash
+mvn test -Dtest=JweTest
+```
+
+### When to Use JWS vs JWE
+
+Understanding when to use JWS versus JWE is crucial for implementing the right security solution for your use case.
+
+#### Similarities Between JWS and JWE
+
+**Common Characteristics:**
+- **JSON-based Structure**: Both use JSON for headers and payloads
+- **RFC Standards**: Both follow IETF standards (JWS: RFC 7515, JWE: RFC 7516)
+- **URL-safe Format**: Both use Base64 encoding for HTTP headers and URL parameters
+- **Dot-separated Parts**: Both use periods to separate different components
+- **Header Metadata**: Both include algorithm and encryption information in headers
+- **Tamper Detection**: Both provide integrity protection (though through different mechanisms)
+
+**Common Use Cases:**
+- **API Communication**: Both can secure data in transit
+- **Token-based Systems**: Both can be used for authentication and authorization
+- **Data Validation**: Both ensure data hasn't been modified
+- **Standard Compliance**: Both are widely supported across platforms
+
+#### Key Differences
+
+| Aspect | JWS (JSON Web Structure) | JWE (JSON Web Encryption) |
+|--------|--------------------------|----------------------------|
+| **Primary Purpose** | Digital signatures and authentication | Data encryption and confidentiality |
+| **Content Visibility** | Payload is readable (Base64 encoded) | Payload is encrypted and unreadable |
+| **Structure** | 3 parts: header.payload.signature | 5 parts: header.encrypted_key.iv.ciphertext.tag |
+| **Algorithm** | HMAC-SHA256, RSA, ECDSA | AES-GCM, RSA-OAEP, ECDH-ES |
+| **Key Type** | Symmetric (HMAC) or Asymmetric | Symmetric (AES) or Asymmetric |
+| **Performance** | Faster (no encryption/decryption) | Slower (requires encryption/decryption) |
+
+#### When to Use JWS
+
+✅ **Use JWS when you need authentication and integrity, but NOT confidentiality**
+
+- **JWT Tokens**: User sessions, API authentication
+- **Signed Documents**: Contracts, certificates, configuration files
+- **Audit Logs**: Events that need to be verifiable but readable
+- **Public Data**: Information that should be accessible but tamper-proof
+- **Performance Critical**: When speed is more important than secrecy
+
+**Example JWS Use Case:**
+```java
+// API authentication token - readable but verifiable
+String jwsToken = CryptoUtils.signJwsHmacSha256(apiRequest, secretKey);
+// Result: eyJhbGciOiJIUzI1NiJ9.eyJtZXRob2QiOiJQT1NUIi... (readable payload)
+```
+
+#### When to Use JWE
+
+✅ **Use JWE when you need confidentiality, integrity, AND authentication**
+
+- **Sensitive Data**: Personal information, financial data, secrets
+- **Secure Storage**: Encrypted configuration, encrypted databases
+- **Private Communication**: Messages that should be completely hidden
+- **Compliance Requirements**: When data must be encrypted at rest/transit
+- **High Security**: When maximum protection is required
+
+**Example JWE Use Case:**
+```java
+// Encrypted order data - completely hidden and secure
+String jweToken = CryptoUtils.encryptAsJwe(sensitiveOrderData, aesKey);
+// Result: eyJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiZGlyIn0... (encrypted payload)
+```
+
+#### Security Properties Comparison
+
+| Security Goal | JWS | JWE |
+|---------------|-----|-----|
+| **Integrity** | ✅ Yes (HMAC signature) | ✅ Yes (Authentication tag) |
+| **Authentication** | ✅ Yes (Key-based signing) | ✅ Yes (Key-based encryption) |
+| **Confidentiality** | ❌ No (payload readable) | ✅ Yes (AES encryption) |
+| **Non-repudiation** | ✅ Yes (cryptographic proof) | ❌ No (in direct mode) |
+
+#### Practical Decision Matrix
+
+**Choose JWS if:**
+```
+Data is public or semi-public AND
+You need to verify authenticity AND
+You need to ensure integrity AND
+Performance is important
+```
+
+**Choose JWE if:**
+```
+Data is sensitive or private AND
+You need complete confidentiality AND
+You need to ensure integrity AND
+You need to verify authenticity AND
+Security is more important than performance
+```
+
+#### Hybrid Approach
+
+Sometimes you might want to use **both together**:
+
+```java
+// 1. First encrypt sensitive data with JWE
+String encryptedData = CryptoUtils.encryptAsJwe(sensitiveOrderData, aesKey);
+
+// 2. Then sign the encrypted data with JWS for authentication
+String signedEncryptedData = CryptoUtils.signJwsHmacSha256(encryptedData, hmacKey);
+
+// Result: JWS containing JWE - provides all 4 cryptographic goals!
+```
+
+#### Real-World Examples
+
+**JWS Examples:**
+- **OAuth 2.0 Access Tokens**: Need to be readable by clients
+- **API Request Signing**: Verify request authenticity
+- **Configuration Files**: Ensure settings haven't been tampered with
+- **Event Logs**: Verify log entries are authentic
+
+**JWE Examples:**
+- **Encrypted API Payloads**: Hide sensitive request/response data
+- **Secure Storage**: Encrypt database records, configuration secrets
+- **Private Messaging**: Encrypt chat messages, emails
+- **Financial Data**: Encrypt transaction details, account information
+
+#### Summary
+
+- **JWS**: "I can read this, and I know it's authentic and unmodified"
+- **JWE**: "I can't read this, but I know it's authentic, unmodified, and confidential"
+
+Choose based on whether you need **readability** (JWS) or **confidentiality** (JWE) for your specific use case!
+
 ## Security Properties and Technologies
 
 This project demonstrates technologies that address the four fundamental security properties:
@@ -259,6 +474,8 @@ This project demonstrates technologies that address the four fundamental securit
 | **HMAC-SHA256** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **AES-GCM** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **JWT + HMAC** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
+| **JWS** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
+| **JWE** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 
 ### Use Case Examples
 
@@ -492,6 +709,11 @@ mvn test -Dtest=CryptographicComparisonTest
 #### JWS Tests
 ```bash
 mvn test -Dtest=JwsTest
+```
+
+#### JWE Tests
+```bash
+mvn test -Dtest=JweTest
 ```
 
 #### All Integrity Tests

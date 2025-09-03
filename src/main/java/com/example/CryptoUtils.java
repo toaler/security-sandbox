@@ -8,6 +8,13 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.crypto.DirectEncrypter;
+import com.nimbusds.jose.crypto.DirectDecrypter;
+import javax.crypto.spec.SecretKeySpec;
 import java.text.ParseException;
 import java.util.Optional;
 
@@ -86,5 +93,78 @@ public class CryptoUtils {
         // JWS tokens have three parts separated by dots
         String[] parts = token.split("\\.");
         return parts.length == 3;
+    }
+    
+    /**
+     * Encrypts content as a JWE using AES-GCM with a 256-bit key.
+     * 
+     * @param content The content to encrypt
+     * @param key The AES key for encryption (must be 256 bits)
+     * @return A serialized JWE token
+     * @throws RuntimeException if encryption fails
+     */
+    public static String encryptAsJwe(String content, byte[] key) {
+        try {
+            var header = new JWEHeader(JWEAlgorithm.DIR, EncryptionMethod.A256GCM);
+            var payload = new Payload(content); // #A
+            var jweObject = new JWEObject(header, payload); // #A
+            var aesKey = new SecretKeySpec(key, "AES"); // #B
+            jweObject.encrypt(new DirectEncrypter(aesKey)); // #B
+            return jweObject.serialize(); // #C
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * Decrypts a JWE token using AES-GCM with a 256-bit key.
+     * 
+     * @param jwe The JWE token to decrypt
+     * @param key The AES key for decryption (must be 256 bits)
+     * @return The decrypted content
+     * @throws RuntimeException if decryption fails
+     */
+    public static String decryptJwe(String jwe, byte[] key) {
+        try {
+            JWEObject jweObject = JWEObject.parse(jwe); // #A
+            SecretKeySpec aesKey = new SecretKeySpec(key, "AES"); // #B
+            jweObject.decrypt(new DirectDecrypter(aesKey)); // #B
+            Payload payload = jweObject.getPayload(); // #C
+            return payload.toString(); // #C
+        } catch (ParseException | JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * Checks if a string is a valid JWE token format.
+     * 
+     * @param token The token to validate
+     * @return true if the token appears to be a valid JWE format
+     */
+    public static boolean isValidJweFormat(String token) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+        
+        // JWE tokens have five parts separated by dots
+        // header.encrypted_key.iv.ciphertext.tag
+        String[] parts = token.split("\\.");
+        return parts.length == 5;
+    }
+    
+    /**
+     * Extracts the header from a JWE token without decryption.
+     * 
+     * @param jweToken The JWE token to parse
+     * @return Optional containing the header if parsing succeeds, empty otherwise
+     */
+    public static Optional<String> extractJweHeader(String jweToken) {
+        try {
+            JWEObject jweObject = JWEObject.parse(jweToken);
+            return Optional.of(jweObject.getHeader().toString());
+        } catch (ParseException e) {
+            return Optional.empty();
+        }
     }
 } 

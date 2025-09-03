@@ -8,9 +8,10 @@ This project serves as a sandbox environment for exploring and testing various s
 
 - **Google Tink**: Cryptographic library for encryption/decryption and HMAC
 - **Nimbus JOSE+JWT**: JWT (JSON Web Token) creation and verification
+- **JOSE Standards**: JSON Web Structure (JWS) for digital signatures and authentication
 - **JUnit 5**: Latest version for unit testing
 - **AssertJ**: Fluent assertion library for readable tests
-- **Cryptographic Concepts**: Message Digest, MAC, and HMAC comparison
+- **Cryptographic Concepts**: Message Digest, MAC, HMAC, and JWS comparison
 
 ## Prerequisites
 
@@ -27,7 +28,8 @@ security-sandbox/
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/example/
-│   │   │       └── App.java         # Main application with demos
+│   │   │       ├── App.java         # Main application with demos
+│   │   │       └── CryptoUtils.java # JWS signing and verification utilities
 │   │   └── resources/               # Application resources
 │   └── test/
 │       ├── java/
@@ -35,7 +37,8 @@ security-sandbox/
 │       │       └── integrity/       # Data integrity and crypto tests
 │       │           ├── IntegrityTest.java           # Data integrity verification
 │       │           ├── TinkHmacTest.java            # Tink HMAC demonstrations
-│       │           └── CryptographicComparisonTest.java # MD, MAC, HMAC comparison
+│       │           ├── CryptographicComparisonTest.java # MD, MAC, HMAC comparison
+│       │           └── JwsTest.java                 # JWS functionality tests
 │       └── resources/
 │           └── com/example/integrity/
 │               └── warehouse-refunds.json           # Sample data for testing
@@ -123,6 +126,93 @@ The test suite demonstrates:
 - Exception testing
 - Collection and string assertions
 - Comprehensive cryptographic concept comparisons
+
+## JOSE (JavaScript Object Signing and Encryption)
+
+The project now includes comprehensive support for JavaScript Object Signing and Encryption (JOSE) standards, providing secure ways to handle JSON-based security tokens and encrypted data.
+
+### JSON Web Structure (JWS)
+
+JSON Web Structure (JWS) provides a means of representing content secured with digital signatures or Message Authentication Codes (MACs) using JSON-based data structures.
+
+#### JWS Implementation Features
+
+- **HMAC-SHA256 Algorithm**: Uses HMAC-SHA256 for signing and verification
+- **RFC 7515 Compliance**: Follows JSON Web Signature standard
+- **Three-Part Structure**: Implements header.payload.signature format
+- **Payload Verification**: Ensures data integrity and authenticity
+- **Tamper Detection**: Automatically detects any modifications to signed content
+
+#### JWS Use Cases Demonstrated
+
+1. **Order Data Integrity**
+   - Signs order data with proper JSON structure
+   - Ensures order amounts and IDs cannot be modified
+   - Provides proof of data authenticity
+
+2. **API Request Authentication**
+   - Signs complete API requests including order data
+   - Verifies request authenticity and integrity
+   - Prevents request tampering and replay attacks
+
+3. **Financial Transaction Security**
+   - Secures financial transaction data
+   - Provides tamper detection for monetary amounts
+   - Ensures transaction authenticity
+
+4. **Order Processing Workflow**
+   - Signs workflow step data
+   - Prevents workflow manipulation
+   - Ensures process integrity
+
+#### JWS Security Properties
+
+| Security Property | Description | Implementation |
+|-------------------|-------------|----------------|
+| **Integrity** | Content cannot be modified without detection | HMAC-SHA256 signature verification |
+| **Authenticity** | Only holders of the secret key can create valid signatures | Secret key-based signing |
+| **Non-repudiation** | Signers cannot deny creating the signature | Cryptographic proof of origin |
+| **Tamper Evidence** | Any modification breaks verification | Automatic signature validation |
+
+#### JWS Token Structure
+
+```
+eyJhbGciOiJIUzI1NiJ9.eyJvcmRlcnMiOlt7Im9yZGVySWQiOiIxMjM0NSIsImFtb3VudCI6NTAwfSx7Im9yZGVySWQiOiI1Njc4OSIsImFtb3VudCI6MjUwfV19.signature
+```
+
+**Components:**
+- **Header**: Algorithm specification (`HS256`)
+- **Payload**: Base64-encoded JSON content
+- **Signature**: HMAC-SHA256 signature of header.payload
+
+#### JWS Implementation Example
+
+```java
+// Sign order data
+String orderData = "{\"orders\":[{\"orderId\":\"12345\",\"amount\":500}]}";
+String jwsToken = CryptoUtils.signJwsHmacSha256(orderData, secretKey);
+
+// Verify the signature
+Optional<String> verifiedData = CryptoUtils.verifyJwsHmacSha256(jwsToken, secretKey);
+if (verifiedData.isPresent() && verifiedData.get().equals(orderData)) {
+    // Data is authentic and unmodified
+    System.out.println("Order data verified successfully");
+}
+```
+
+#### JWS Testing
+
+The project includes comprehensive JWS testing with:
+- **Signing Tests**: Verify JWS token creation
+- **Verification Tests**: Ensure payload integrity
+- **Security Tests**: Demonstrate tamper detection
+- **Use Case Tests**: Real-world scenario validation
+- **Wrong Key Tests**: Verify security properties
+
+Run JWS tests with:
+```bash
+mvn test -Dtest=JwsTest
+```
 
 ## Security Properties and Technologies
 
@@ -397,6 +487,11 @@ mvn test -Dtest=HmacTest
 #### Cryptographic Comparison Tests
 ```bash
 mvn test -Dtest=CryptographicComparisonTest
+```
+
+#### JWS Tests
+```bash
+mvn test -Dtest=JwsTest
 ```
 
 #### All Integrity Tests
